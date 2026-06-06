@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import type { UserPreference } from "../../../domain/preferences";
 import type {
   PreferenceUpsert,

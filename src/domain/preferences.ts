@@ -10,7 +10,7 @@ export interface PreferenceEntry extends PreferenceKey {
   enabled: boolean;
 }
 
-export interface DefaultPreference extends PreferenceEntry {}
+export type DefaultPreference = PreferenceEntry;
 
 export interface UserPreference extends PreferenceEntry {
   userId: string;

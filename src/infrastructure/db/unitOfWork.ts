@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import type { UnitOfWork } from "../../domain/ports/repositories";
 import { createDefaultPreferenceRepository } from "./repositories/defaultPreferenceRepository";
 import { createUserPreferenceRepository } from "./repositories/userPreferenceRepository";

@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import type { DefaultPreference } from "../../../domain/preferences";
 import type { DefaultPreferenceRepository } from "../../../domain/ports/repositories";
 import type { Channel, NotificationType } from "../../../domain/types";

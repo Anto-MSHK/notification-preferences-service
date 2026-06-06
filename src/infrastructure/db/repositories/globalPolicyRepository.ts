@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import type { GlobalPolicy } from "../../../domain/policy";
 import type { GlobalPolicyRepository } from "../../../domain/ports/repositories";
 import {

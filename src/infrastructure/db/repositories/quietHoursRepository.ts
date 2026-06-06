@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import type { QuietHours } from "../../../domain/quietHours";
 import type { QuietHoursRepository } from "../../../domain/ports/repositories";
 
