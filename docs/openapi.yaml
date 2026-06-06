@@ -3,21 +3,21 @@ info:
   title: Notification Preferences Service
   version: 1.0.0
   description: >
-    Single source of truth for which notification types and channels may be
-    sent to a user, combining defaults, per-user overrides, global policies
-    and quiet hours.
+    Единый источник правды о том, какие типы уведомлений и по каким каналам
+    можно отправлять пользователю. Объединяет дефолты, индивидуальные настройки,
+    глобальные политики и quiet hours.
 servers:
   - url: http://localhost:3000
-    description: Local
+    description: Локальный
 
 paths:
   /health:
     get:
-      summary: Liveness check
+      summary: Проверка доступности
       operationId: health
       responses:
         "200":
-          description: Service is up
+          description: Сервис работает
           content:
             application/json:
               schema:
@@ -32,26 +32,25 @@ paths:
     parameters:
       - $ref: "#/components/parameters/UserId"
     get:
-      summary: Get a user's effective preferences
+      summary: Получить эффективные настройки пользователя
       operationId: getPreferences
       description: >
-        Returns the default matrix with user overrides applied. Any id is valid;
-        an unknown user resolves to the defaults.
+        Возвращает матрицу дефолтов с применёнными переопределениями пользователя.
+        Любой id валиден; неизвестный пользователь резолвится в дефолты.
       responses:
         "200":
-          description: Effective preferences and quiet hours
+          description: Эффективные настройки и quiet hours
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserPreferences"
     post:
-      summary: Update a user's preferences and/or quiet hours
+      summary: Обновить настройки и/или quiet hours пользователя
       operationId: updatePreferences
       description: >
-        Both top-level keys are optional. Omitting quietHours leaves it
-        unchanged; sending null clears it; sending an object replaces it.
-        Writes are idempotent: replaying the same body converges to the same
-        state.
+        Оба верхнеуровневых ключа необязательны. Отсутствие quietHours оставляет
+        его без изменений; null очищает; объект заменяет. Запись идемпотентна:
+        повтор того же тела приводит к тому же состоянию.
       requestBody:
         required: true
         content:
@@ -76,7 +75,7 @@ paths:
                   quietHours: null
       responses:
         "200":
-          description: Updated effective preferences
+          description: Обновлённые эффективные настройки
           content:
             application/json:
               schema:
@@ -86,7 +85,7 @@ paths:
 
   /evaluate:
     post:
-      summary: Decide whether a notification may be sent
+      summary: Решить, можно ли отправить уведомление
       operationId: evaluate
       requestBody:
         required: true
@@ -104,7 +103,7 @@ paths:
                   datetime: "2026-06-06T21:30:00Z"
       responses:
         "200":
-          description: Decision
+          description: Решение
           content:
             application/json:
               schema:
@@ -147,7 +146,7 @@ components:
 
     QuietHours:
       type: object
-      description: Local wall-clock window in an IANA timezone. May wrap past midnight.
+      description: Окно локального времени в таймзоне IANA. Может переходить через полночь.
       properties:
         timezone:
           type: string
@@ -227,7 +226,7 @@ components:
         region:
           type: string
           minLength: 1
-          description: Free-form region code, normalized to upper-case.
+          description: Произвольный код региона, нормализуется к верхнему регистру.
         datetime:
           type: string
           format: date-time
@@ -258,7 +257,7 @@ components:
 
   responses:
     ValidationError:
-      description: Invalid request body
+      description: Некорректное тело запроса
       content:
         application/json:
           schema:
