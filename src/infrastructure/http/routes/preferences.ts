@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction, type RequestHan
 
 import type { PreferencesService, UpdatePreferencesInput } from "../../../application/preferencesService";
 import type { UserPreferences } from "../../../domain/preferences";
+import { ValidationError } from "../../../domain/errors";
 import {
   quietHoursInputToDomain,
   quietHoursToApi,
@@ -12,6 +13,14 @@ function asyncHandler(handler: (req: Request, res: Response) => Promise<void>): 
   return (req, res, next: NextFunction) => {
     handler(req, res).catch(next);
   };
+}
+
+function requireUserId(req: Request): string {
+  const userId = req.params.id;
+  if (!userId) {
+    throw new ValidationError("userId is required");
+  }
+  return userId;
 }
 
 function renderPreferences(prefs: UserPreferences): unknown {
@@ -33,7 +42,7 @@ export function createPreferencesRouter(preferencesService: PreferencesService):
   router.get(
     "/users/:id/preferences",
     asyncHandler(async (req, res) => {
-      const userId = req.params.id ?? "";
+      const userId = requireUserId(req);
       const prefs = await preferencesService.getPreferences(userId);
       res.status(200).json(renderPreferences(prefs));
     }),
@@ -42,6 +51,7 @@ export function createPreferencesRouter(preferencesService: PreferencesService):
   router.post(
     "/users/:id/preferences",
     asyncHandler(async (req, res) => {
+      const userId = requireUserId(req);
       const body = updatePreferencesSchema.parse(req.body);
 
       const input: UpdatePreferencesInput = {};
@@ -53,7 +63,6 @@ export function createPreferencesRouter(preferencesService: PreferencesService):
         input.quietHours = body.quietHours ? quietHoursInputToDomain(body.quietHours) : null;
       }
 
-      const userId = req.params.id ?? "";
       const updated = await preferencesService.updatePreferences(userId, input);
       res.status(200).json(renderPreferences(updated));
     }),
