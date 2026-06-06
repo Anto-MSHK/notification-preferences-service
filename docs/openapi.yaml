@@ -1,0 +1,265 @@
+openapi: 3.1.0
+info:
+  title: Notification Preferences Service
+  version: 1.0.0
+  description: >
+    Single source of truth for which notification types and channels may be
+    sent to a user, combining defaults, per-user overrides, global policies
+    and quiet hours.
+servers:
+  - url: http://localhost:3000
+    description: Local
+
+paths:
+  /health:
+    get:
+      summary: Liveness check
+      operationId: health
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                required: [status]
+
+  /users/{id}/preferences:
+    parameters:
+      - $ref: "#/components/parameters/UserId"
+    get:
+      summary: Get a user's effective preferences
+      operationId: getPreferences
+      description: >
+        Returns the default matrix with user overrides applied. Any id is valid;
+        an unknown user resolves to the defaults.
+      responses:
+        "200":
+          description: Effective preferences and quiet hours
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferences"
+    post:
+      summary: Update a user's preferences and/or quiet hours
+      operationId: updatePreferences
+      description: >
+        Both top-level keys are optional. Omitting quietHours leaves it
+        unchanged; sending null clears it; sending an object replaces it.
+        Writes are idempotent: replaying the same body converges to the same
+        state.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePreferencesRequest"
+            examples:
+              disableMarketingEmail:
+                value:
+                  preferences:
+                    - notificationType: marketing
+                      channel: email
+                      enabled: false
+              setQuietHours:
+                value:
+                  quietHours:
+                    timezone: Europe/Berlin
+                    start: "22:00"
+                    end: "08:00"
+              clearQuietHours:
+                value:
+                  quietHours: null
+      responses:
+        "200":
+          description: Updated effective preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferences"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /evaluate:
+    post:
+      summary: Decide whether a notification may be sent
+      operationId: evaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluateRequest"
+            examples:
+              blockedInEu:
+                value:
+                  userId: u123
+                  notificationType: marketing
+                  channel: sms
+                  region: EU
+                  datetime: "2026-06-06T21:30:00Z"
+      responses:
+        "200":
+          description: Decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluateResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+components:
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+
+  schemas:
+    Channel:
+      type: string
+      enum: [email, sms, push, messenger]
+    NotificationType:
+      type: string
+      enum: [transactional, security, system, marketing, promotional]
+    PreferenceSource:
+      type: string
+      enum: [default, user, unset]
+    Decision:
+      type: string
+      enum: [allow, deny]
+    DecisionReason:
+      type: string
+      enum:
+        - allowed
+        - blocked_by_global_policy
+        - disabled_by_user
+        - disabled_by_default
+        - quiet_hours
+        - not_configured
+
+    QuietHours:
+      type: object
+      description: Local wall-clock window in an IANA timezone. May wrap past midnight.
+      properties:
+        timezone:
+          type: string
+          example: Europe/Berlin
+        start:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          example: "22:00"
+        end:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          example: "08:00"
+      required: [timezone, start, end]
+
+    ResolvedPreference:
+      type: object
+      properties:
+        notificationType:
+          $ref: "#/components/schemas/NotificationType"
+        channel:
+          $ref: "#/components/schemas/Channel"
+        enabled:
+          type: boolean
+        source:
+          $ref: "#/components/schemas/PreferenceSource"
+      required: [notificationType, channel, enabled, source]
+
+    UserPreferences:
+      type: object
+      properties:
+        userId:
+          type: string
+        preferences:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResolvedPreference"
+        quietHours:
+          oneOf:
+            - $ref: "#/components/schemas/QuietHours"
+            - type: "null"
+      required: [userId, preferences, quietHours]
+
+    PreferenceUpsert:
+      type: object
+      properties:
+        notificationType:
+          $ref: "#/components/schemas/NotificationType"
+        channel:
+          $ref: "#/components/schemas/Channel"
+        enabled:
+          type: boolean
+      required: [notificationType, channel, enabled]
+
+    UpdatePreferencesRequest:
+      type: object
+      properties:
+        preferences:
+          type: array
+          items:
+            $ref: "#/components/schemas/PreferenceUpsert"
+        quietHours:
+          oneOf:
+            - $ref: "#/components/schemas/QuietHours"
+            - type: "null"
+      additionalProperties: false
+
+    EvaluateRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          minLength: 1
+        notificationType:
+          $ref: "#/components/schemas/NotificationType"
+        channel:
+          $ref: "#/components/schemas/Channel"
+        region:
+          type: string
+          minLength: 1
+          description: Free-form region code, normalized to upper-case.
+        datetime:
+          type: string
+          format: date-time
+      required: [userId, notificationType, channel, region, datetime]
+
+    EvaluateResponse:
+      type: object
+      properties:
+        decision:
+          $ref: "#/components/schemas/Decision"
+        reason:
+          $ref: "#/components/schemas/DecisionReason"
+      required: [decision, reason]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required: [code, message]
+      required: [error]
+
+  responses:
+    ValidationError:
+      description: Invalid request body
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
